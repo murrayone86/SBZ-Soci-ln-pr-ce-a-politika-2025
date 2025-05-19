@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sociální práce a politika - SBZ 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .logo {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            max-width: 150px;
+            height: auto;
+        }
+        #visitCounter {
+            font-size: 1.125rem; /* text-lg v Tailwind */
+            color: #1f2937; /* text-gray-800 v Tailwind */
+            margin-top: 1rem; /* mt-4 v Tailwind */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen relative">
+    <img src="LOGO_FSE.jpg" alt="Logo FSE UJEP" class="logo">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+        <h1 class="text-2xl font-bold mb-4 text-center">Sociální práce a politika - SBZ 2025</h1>
+        <select id="category" class="w-full p-2 mb-4 border rounded">
+            <option value="all">Všechny kategorie</option>
+            <option value="teorie">Teoretická témata</option>
+            <option value="prakticka">Praktická témata</option>
+            <option value="politika">Sociální politika</option>
+        </select>
+        <div class="flex space-x-2 mb-4">
+            <button onclick="drawTopic()" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Losovat okruh</button>
+            <button onclick="startSequential()" class="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600">Otázky postupně</button>
+        </div>
+        <div id="result" class="mt-4 text-lg"></div>
+        <div id="sequentialControls" class="mt-4 hidden">
+            <button onclick="previousQuestion()" class="bg-gray-500 text-white p-2 rounded hover:bg-gray-600 mr-2" id="backButton">Zpět</button>
+            <button onclick="nextQuestion()" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Další</button>
+        </div>
+        <div class="mt-6 flex items-center justify-center space-x-4">
+            <img src="qr_kod.jpg" alt="QR kód pro příspěvek" class="w-24 h-24">
+            <p class="text-gray-700 text-center">Podpoř mojí práci libovolným příspěvkem, stálo to spoustu času.</p>
+        </div>
+        <!-- Počítadlo návštěv pod QR kódem -->
+        <div id="visitCounter" class="mt-4 text-center">
+            Počet návštěv: <span id="visitCount">0</span>
+        </div>
+
+    </div>
+
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+            return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+
+                    // Convert sheet to JSON to filter blank rows
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                    // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    // Fallback
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                        headerRowIndex = 0;
+                    }
+
+                    // Convert filtered JSON back to CSV
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
+                }
+            }
+            return gk_fileData[filename] || "";
+        }
+    </script>
+    <script>
+        function sanitizeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        const topics = {
+            teorie: [
+                { number: 1, name: "Vývoj pomoci a sociální práce ve světě a v ČR", description: "pomoc v lidské společnosti; pomáhající profese; vznik a vývoj sociální práce v Evropě a USA; vznik a vývoj sociální práce na území dnešní ČR; osobnosti sociální práce;", link: "https://docs.google.com/document/d/14HcOq3m0FErJ1qJFfAhIJzQOAE7OAmQC/view?usp=sharing" },
+                { number: 2, name: "Soudobá sociální práce a její hodnoty a dilemata", description: "sociální práce v současnosti; definování sociální práce; sociální fungování; hodnoty soudobé sociální práce; definování dilemat v sociální práci; samotná dilemata soudobé sociální práce dle různých autorů/autorek;", link: "https://docs.google.com/document/d/1XAjmMCt7bBB-_OAo82F6rRLsyp9C9Q7r/view?usp=sharing" },
+                { number: 3, name: "Teorie sociální práce", description: "sociální práce a její postavení v systému společenských věd; charakter teorií sociální práce; typologie a modely teorií sociální práce; paradigmata sociální práce; soudobé teorie sociální práce a významní představitelé teorie sociální práce;", link: "https://docs.google.com/document/d/1PYg5VJK6OnXugXbCdftYauIUEbHekDfW/view?usp=sharing" },
+                { number: 4, name: "Metody sociálních výzkumů v sociální práci", description: "kvalitativní a kvantitativní paradigma – rozdíly, výhody a nevýhody; základní techniky sběru dat a jejich použití; rizika zkreslení při výzkumu; příklady využití výzkumu v SP;", link: "https://docs.google.com/document/d/1_iphYFuvrt40zFCDIOx_FsBZlJ0Fgp4Q/view?usp=sharing" },
+                { number: 5, name: "Filosofické teorie a přístupy v sociální práci", description: "filozofická východiska a pojmy relevantní pro sociální práci (smysl života, svoboda, spravedlnost; falešná víra, dobrovolnost, solidarita ap.); relevantní etické teorie – řecká a helenistická filosofie; deontologie, pragmatismus; utilitarismus, etika odpovědnosti; soudobá etika; profesní etika apod.);", link: "https://docs.google.com/document/d/1gFbNJGC6t3eFAas6EytsEtMLUCWswj4L/view?usp=sharing" },
+                { number: 6, name: "Sociologické teorie a přístupy v sociální práci", description: "vztah sociologie a sociální práce; paradigma jako rámec pro výkon sociální práce; představitelé sociologie se vztahem k sociální práci;", link: "https://docs.google.com/document/d/1Dey8PcRJF-NyfssIH33nY9BE3JTnVn8p/view?usp=sharing" },
+                { number: 7, name: "Psychologické teorie a přístupy v sociální práci", description: "pojmy z psychologie relevantní pro sociální práci (schopnosti; motivace, emoce; charakter apod.); teorie osobnosti a osobnost; sociální psychologie; saisons motivace; významné teorie pro sociální práci;", link: "https://docs.google.com/document/d/1FTCGB5n0P35sXwtW1hI7HEkB0Fd42oI9/view?usp=sharing" },
+                { number: 8, name: "Teorie komunikace a komunikace v sociální práci", description: "komunikační teorie; komunikační schéma; verbální a neverbální komunikace; základní komunikační premisy; poruchy v komunikaci; komunikace se specifickými typy klientů;", link: "https://docs.google.com/document/d/1r4xeEL1wpcmRQleOyUSzuvxIbEzYa02u/view?usp=sharing" },
+                { number: 9, name: "Teorie sociální deviace", description: "základní pojmy (pozitivní, negativní deviace, norma, sankce; sociální kontrola ...); normativní a relativistické přístupy k sociálním deviacím – vymezení, představitelé, paradigmata;", link: "https://docs.google.com/document/d/1sR7wbPQUNLBA0B9wGG5FofUowkBp6vbU/view?usp=sharing" },
+                { number: 10, name: "Minority (menšiny v společnosti)", description: "definice a znaky minority, modely soužití, tolerance ve společnosti, funkce stereotypů, etnicita a rasa, nacionalismus, neetnické menšiny;", link: "https://docs.google.com/document/d/1FoJgt8Z8pQFuIXaL8NO667zbyKluW5Dk/view?usp=sharing" },
+                { number: 11, name: "Prostor v sociální práci (formy sociální práce)", description: "kategorizace sociální práce skrze prostoru – ambulantní sociální práce; terénní sociální práce; rezidenční sociální práce (lůžková oddělení); role (podřízenost a nadřízenost) sociálního pracovníka v jednotlivých zařízeních; stigmatizace a prostor – E. Goffman; vliv vnějšího prostředí na skupinu či jednotlivce v kontextu sociální práce;", link: "https://docs.google.com/document/d/1C7Lp2D_5qr_lcLicRrkiqWxq7koXec_U/view?usp=sharing" },
+                { number: 12, name: "Individuální práce", description: "případová práce a práce s jednotlivcem – teoretické východiska obou přístupů; posouzení životní situace klienta vs. sociální diagnostika (subjektivizmus vs. objektivizmus v práci s klientem; první kontakt s klientem; etapy individuální sociální práce; charakteristika etap sociální diagnostiky; vztah v individuální práci; význam sociální terapie, dilema kontroly a pomoci v sociální práci;", link: "https://docs.google.com/document/d/1J4zovU5EtWuDsAR7as1mW7NdSHTOxH2P/view?usp=sharing" },
+                { number: 13, name: "Sociální práce se skupinou", description: "definice skupiny a jejich členění; vývoj skupiny, vedení skupiny; dynamika skupiny a její prvky; problematika vedení skupin; problematika vývoje skupiny. Skupiny v sociální práci; role vedoucího (terapeuta) a jeho základní úkoly;", link: "https://docs.google.com/document/d/1P95dKhc_SKHMQi9Q1J9iym1CtS8EOdD0/view?usp=sharing" },
+                { number: 14, name: "Komunitní práce", description: "význam sociální změny, sociální potřeba; teoretické přístupy využívané v komunitní práci (ekologický přístup, antiopresivní přístupy, zplnomocnění, participace,…); typologie modelů komunitní sociální práce, vývoj komunitní sociální práce;", link: "https://docs.google.com/document/d/1p4sCdWTGD-bppPHElpymBaXwUJzNxtKw/view?usp=sharing" },
+                { number: 15, name: "Řízení v sociální práci", description: "získávání a výběr pracovníků; hodnocení pracovního výkonu; vzdělávání, služby pro zaměstnance; dovednosti manažera;", link: "https://docs.google.com/document/d/1pLq36pLNNo8p4W5RhOJfee0IlbUEb-z4/view?usp=sharing" },
+                { number: 16, name: "Financování v sociální práci", description: "projekt – obsah, základní donoři; přínos projektů, nároky na organizaci, fundraising, medializace projektu, evaluace; sponzoring; neziskové a příspěvkové organizace; Evropský sociální fond, vícezdrojové financování;", link: "https://docs.google.com/document/d/1ABe62V3qTk-np4wyrijnhIZzYSA0zm0P/view?usp=sharing" },
+                { number: 17, name: "Sociální služby", description: "Sociální služby z filozofického hlediska; sociální služby z legislativního hlediska; význam managementu péče, monitoring potřeb, individuální plány péče, komunitní plánování, typologie služeb; standardy kvality sociálních služeb;", link: "https://docs.google.com/document/d/1YJVc9AAlBL_DnDSj-dPR97l7v4dX_XFC/view?usp=sharing" },
+                { number: 18, name: "Sociální poradenství", description: "sociální poradenství jako součást sociálních služeb; průběh poradenského procesu; poradenský rozhovor; druhy poradenství a jejich charakteristiky; interpersonální percepce;", link: "https://docs.google.com/document/d/14LpaQNRgAe6rk7IxKzwMfvirMNndvJ8Y/view?usp=sharing" },
+                { number: 19, name: "Krizová intervence", description: "pojem a příčiny krize, typy krizí; teorie krizových intervencí; zásady krizové intervence; chování člověka v krizi;", link: "https://docs.google.com/document/d/1zrKAR6VNmv2ekq_6QidRRaucN-TY2t62/view?usp=sharing" }
+            ],
+            prakticka: [
+                { number: 1, name: "Sociální práce se seniory", description: "Postavení seniorů ve společnosti, změny životního programu, aktivní prožívání stáří. Sociální služby. Aktivizační programy.", link: "https://docs.google.com/document/d/1z0HYpcfuj7ZfBGjzl90RkUvF28mhnXFg/view?usp=sharing" },
+                { number: 2, name: "Hospicová péče a doprovázení", description: "Sociální práce v hospicích. Podoby hospicové péče. Odlehčovací služby.", link: "https://docs.google.com/document/d/11sc3x78DxGRX5NA3Oc4zDborJPUd4fZ5/view?usp=sharing" },
+                { number: 3, name: "Sociální práce s osobami s duševním onemocněním", description: "Specifika cílové skupiny. Integrace na trh práce, služby zaměstnanosti, formy další podpory. Sociální služby. Svépomocné skupiny. Práce s rodinou.", link: "https://docs.google.com/document/d/1yJcSLlK2YIU7IwarbBIFagfBvvlXv0Jt/view?usp=sharing" },
+                { number: 4, name: "Sociální práce s dětmi a mládeží s mentálním postižením", description: "Specifické potřeby vzhledem k typům postižení. Sociální práce s rodinou s dítětem s mentálním postižením. Služby v oblasti školství a vzdělávání. Školní a mimoškolní integrace. Problematika rané péče. Sociální služby poskytované rodině a dítěti. Sociální dávky.", link: "https://docs.google.com/document/d/1ps5S_qA3NKk3k4K2QSMw1QZlZu6MMFK8/view?usp=sharing" },
+                { number: 5, name: "Sociální práce s dospělými lidmi s mentálním postižením", description: "Potřeby dospělého člověka s mentálním postižením. Integrace v oblasti bydlení, práce, vzdělávání a volnočasových aktivit. Sociální služby a služby zaměstnanosti. Sociální dávky.", link: "https://docs.google.com/document/d/1LYRtGj5zkmTgpiPyECkCf-aDss-Yt7ef/view?usp=sharing" },
+                { number: 6, name: "Sociální práce s osobami závislými na návykových látkách", description: "Problémy spojené se závislostmi. Prevence. Léčba, práce s osobami závislými na návykových látkách. Sociální služby, spolupráce sociálních pracovníků s dalšími specialisty (např. adiktolog). Práce s rodinou.", link: "https://docs.google.com/document/d/1TYYfJ_3jxlXMO0446OL5TEPTlrtis0G1/view?usp=sharing" },
+                { number: 7, name: "Sociální práce s rodinou", description: "Typologie rodin v sociální práci. Typy sociální práce s rodinou. Sociální práce s mnohoproblémovými rodinami.", link: "https://docs.google.com/document/d/1UVHhYoblgiYSup7Ed3oXZM9ArO3TzY6a/view?usp=sharing" },
+                { number: 8, name: "Ústavní péče pro děti a mládež", description: "Problematika ústavní výchovy. Práva dětí. Ústavní a ochranná výchova. Adopce, osvojení, pěstounská péče. Zařízení poskytující péči v rámci MŠMT. Sociální služby. Post péče. Aktuální problémy.", link: "https://docs.google.com/document/d/1Fh078FnoA7QzlmN_v_WuabggnNb_lTQD/view?usp=sharing" },
+                { number: 9, name: "Sociální práce s dětmi a mládeží", description: "Preventivní programy, streetwork, sociální služby. Práce s problémovými klienty.", link: "https://docs.google.com/document/d/1qd7DRgTMVk8RmiTW5Qm2uqvja9HbGPLm/view?usp=sharing" },
+                { number: 10, name: "Sociální práce s osobami s tělesným postižením", description: "Specifické potřeby cílové skupiny ve vztahu k osobnímu a veřejnému prostoru. Možnosti vzdělávání vzhledem ke specifiku postižení. Zaměstnanost. Sociální služby. Sociální dávky.", link: "https://docs.google.com/document/d/1c0zxHsb2Q-M6vRpZi_vxG4b4tnFl7ThI/view?usp=sharing" },
+                { number: 11, name: "Sociální práce s osobami se smyslovým postižením", description: "Specifické potřeby cílových skupin ve vztahu k osobnímu a veřejnému prostoru. Komunikace. Vzdělávání. Sociální služby. Služby zaměstnanosti. Sociální dávky.", link: "https://docs.google.com/document/d/1XtQVWxgJs1PP-7hEmZ6hKxYD0bMnEYMD/view?usp=sharing" },
+                { number: 12, name: "Sociální práce s osobami v přechodné sociální krizi", description: "Poradenství z pohledu sociální práce, úřadu práce. Prevence prohlubování krize. Krizová intervence. Sociální služby. Organizace a instituce poskytující krizová poradenství, postavení sociálního pracovníka.", link: "https://docs.google.com/document/d/1OqRms0CVzuLkW6h_sAbu0hlhBTWFrSpk/view?usp=sharing" },
+                { number: 13, name: "Sociální práce s etnickými skupinami", description: "Aktuální problematika. Integrace do společnosti. Preventivní programy, práce s předsudky.", link: "https://docs.google.com/document/d/1pF5ipKN51KLIvT7iiaWrImzfwpV2I1TI/view?usp=sharing" },
+                { number: 14, name: "Sociální práce v sociálně vyloučených lokalitách", description: "Problémy spojené s životem v sociálně vyloučené lokalitě. Sociální pracovník v sociálně vyloučené lokalitě. Integrace a inkluze. Sociální služby.", link: "https://docs.google.com/document/d/1cKVtUn2erGimzeg8R1fqkTq8r9sy8zRZ/view?usp=sharing" },
+                { number: 15, name: "Sociální práce s uprchlíky a imigranty", description: "Aktuální situace. Problematika adaptace, sociokulturní handicap. Legislativní rámec práce s uprchlíky. Poradenství.", link: "https://docs.google.com/document/d/1r2FFKG8r3d22yq8ZxQbUxSWSmVpigr9k/view?usp=sharing" },
+                { number: 16, name: "Sociální práce s osobami bez přístřeší", description: "Aktuální situace. Sociální práce s osobami bez přístřeší. Problematika sociálního bydlení v praxi. Streetwork, sociální služby.", link: "https://docs.google.com/document/d/1z53B45IybrUrcrTRO52UmlgJ_yI68hya/view?usp=sharing" },
+                { number: 17, name: "Sociální práce s osobami v sexbyznysu", description: "Problematika sexbyznysu. Sociální práce s osobami živícími se sexbyznysem. Sociální služby, legislativa spojená se sexbyznysem. Organizace pracující s osobami živícími se sexbyznysem.", link: "https://docs.google.com/document/d/1crJ84P-cmQO-neATUTkjz-ZUg6QRrafS/view?usp=sharing" },
+                { number: 18, name: "Kriminalita dětí a mládeže", description: "Sociálně právní ochrana z hlediska státních institucí a sociálních služeb. Probace a mediace. Aktuální situace a trendy.", link: "https://docs.google.com/document/d/1b3OVr6TtHckdtCLNK3VMFmcAQGTywakz/view?usp=sharing" },
+                { number: 19, name: "Kriminalita dospělých", description: "Práce s odsouzenými v průběhu a po ukončení výkonu trestu. Podmínečné propuštění. Práce sociálního kurátora. Probace a mediace.", link: "https://docs.google.com/document/d/1GlrMWSL5MN0CzvotDZKWGElX53xB-WON/view?usp=sharing" },
+                { number: 20, name: "Sociální služby", description: "Postavení sociálních služeb v kontextu sociální práce, legislativní ukotvení sociálních služeb, financování sociálních služeb, transformace sociálních služeb, individuální plánování a role klíčového pracovníka v systému sociálních služeb.", link: "https://docs.google.com/document/d/1qFcf_8d4YKmk2nVmKq49T6jBjUU1UAJk/view?usp=sharing" }
+            ],
+            politika: [
+                { number: 1, name: "Sociální politika jako součást politiky", description: "definice sociální politiky, základní ideologické přístupy, cíle sociální politiky, vztah sociální politiky a ostatních věd.", link: "https://docs.google.com/document/d/1el2zcR_0aOekdPjblJ5Z9OJPLbK5xZwE/view?usp=sharing" },
+                { number: 2, name: "Stát a ostatní subjekty sociální politiky", description: "úloha státu v sociální politice a jeho nástroje k jejímu naplnění, oblasti působení ostatních subjektů, význam neziskového sektoru.", link: "https://docs.google.com/document/d/1BXzFkwkIHWPnhpR0Okw2bHHsZFn39AEw/view?usp=sharing" },
+                { number: 3, name: "Historie sociální politiky", description: "", link: "https://docs.google.com/document/d/1PatlvWbbykLzIMyzJi-so2Ki9PjLzyL4/view?usp=sharing" },
+                { number: 4, name: "Sociální situace a sociální rizika", description: "dělení sociálních situací, oblasti sociálních rizik a jejich řešení.", link: "https://docs.google.com/document/d/1o_Z8LsM2lHQJ7aN-y_0fYttCof8yMWCj/view?usp=sharing" },
+                { number: 5, name: "Principy sociální politiky", description: "sociální spravedlnost - její vymezení, solidarita - formy solidarity, subsidiarita - forma aktivizace;", link: "https://docs.google.com/document/d/1DCm9gorNgNOgc400katplP_SElpVv-A5/view?usp=sharing" },
+                { number: 6, name: "Funkce sociální politiky", description: "formy ochrany v případě negativních sociálních situací, přerozdělování v sociální politice - formy přerozdělování, rozsah redistribuce, nerovnost nebo homogenita - druhy nerovností, sociální nerovnosti v ČR, sociální politika a motivace individua.", link: "https://docs.google.com/document/d/115ZMrlExh1cvqllELRnxVwFfuvaxbP12/view?usp=sharing" },
+                { number: 7, name: "Dopady celospolečenských procesů na sociální politiku", description: "demografický vývoj a sociální politika, ekonomické aspekty sociální politiky, vliv kultury na sociální politiku.", link: "https://docs.google.com/document/d/1yksOr2saCycHgDSB7DVvxCaZAabpxYxI/view?usp=sharing" },
+                { number: 8, name: "Sociální stát", description: "lidská práva a podmínky života, koncept sociálních práv, vývoj sociálního státu, funkce sociálního státu, znaky sociálního státu, typy sociálního státu;", link: "https://docs.google.com/document/d/1ttD6sh0fEEp-dQLqOBmJmVdClbittle2/view?usp=sharing" },
+                { number: 9, name: "Krize sociálního státu", description: "důvody a projevy krize sociálního státu, kam spěje sociální stát v Evropě.", link: "https://docs.google.com/document/d/1I0b7GhnnE42--kLfhrA0yOUtX8I90j4s/view?usp=sharing" },
+                { number: 10, name: "Sociální exkluze a inkluze", description: "exkluze jako sociální situace, důvody exkluze, teoretická pojetí inkluze, politika inkluze.", link: "https://docs.google.com/document/d/1nWj5OUiUs1gnb8pCPUh7qe31cbzAM4be/view?usp=sharing" },
+                { number: 11, name: "Problém migrace", description: "lidská práva a migrační a integrační politika, koncepce integrační politiky u nás.", link: "https://docs.google.com/document/d/12oi7SZScLXvw-bbnTp4bpAkfa2Gltlto/view?usp=sharing" },
+                { number: 12, name: "Systém sociálního zabezpečení", description: "cíle sociálního zabezpečení, formy a jednotlivé jeho pilíře.", link: "https://docs.google.com/document/d/1AbK9Zzj4USGl1dTfz0U-swyI5XLOFhsW/view?usp=sharing" },
+                { number: 13, name: "Chudoba a její řešení", description: "chudoba ve světě a u nás, měření chudoby, druhy chudoby, řešení chudoby.", link: "https://docs.google.com/document/d/1gRrlrGOgYLyUWwW-RfZ7GjVJYU7ZYQYH/view?usp=sharing" },
+                { number: 14, name: "Stáří jako sociální situace", description: "stárnutí populace, stáří jako sociální situace, dopady stáří na podmínky života, systém podpory ve stáří.", link: "https://docs.google.com/document/d/1wFglUjGYPirEfxYAFA3l5Rmk9n1as71l/view?usp=sharing" },
+                { number: 15, name: "Nemoc jako sociální situace", description: "systém hmotného zajištění v nemoci, zdravotní politika jako systém ovlivňující zdravotní stav obyvatel, systémy pomoci dlouhodobě nemocným.", link: "https://docs.google.com/document/d/115pbAO60uFg5oK9nQZkuIXk1YsMP_g_O/view?usp=sharing" },
+                { number: 16, name: "Nezaměstnanost jako sociální situace", description: "fungování trhu práce, příčiny nezaměstnanosti, druhy nezaměstnanosti, nezaměstnaný jako objekt sociální politiky, dopady nezaměstnanosti, politika státu na trhu práce.", link: "https://docs.google.com/document/d/1pomG_cPtYcesF847UvhM9JAV5xMzALFM/view?usp=sharing" },
+                { number: 17, name: "Rodina a rodinná politika", description: "funkce rodiny a současná krize rodiny, podpora rodin, současné směřování rodinné politiky, náhradní rodinná péče, ústavní péče.", link: "https://docs.google.com/document/d/1ZmR0u4PVxI7YP3HnY8xwZQUrWxzcB2Af/view?usp=sharing" },
+                { number: 18, name: "Vzdělání jako forma zajištění sociálních jistot", description: "cíle vzdělávací politiky, principy a funkce vzdělávací politiky a jejich naplnění, školství v ČR a ve světě.", link: "https://docs.google.com/document/d/1UDVV3vaO_-DYRa8ROIP6hQU7MMa4T3we/view?usp=sharing" },
+                { number: 19, name: "Bytová politika", description: "problematika bezdomovectví a její řešení, trh s byty a bytový fond, nájemní bydlení a jeho regulace, podpora zajištění bydlení.", link: "https://docs.google.com/document/d/1-tCMILbuaG0H1JlS24tXSIu3HiZwPg5A/view?usp=sharing" }
+            ]
+        };
+
+        const categoryNames = {
+            teorie: "Teoretická témata",
+            prakticka: "Praktická témata",
+            politika: "Sociální politika"
+        };
+
+        let currentIndex = 0;
+        let currentCategory = null;
+
+        function drawTopic() {
+            try {
+                const category = document.getElementById("category").value;
+                let availableTopics = [];
+
+                if (category === "all") {
+                    availableTopics = [
+                        ...topics.teorie.map(topic => ({ ...topic, category: "teorie" })),
+                        ...topics.prakticka.map(topic => ({ ...topic, category: "prakticka" })),
+                        ...topics.politika.map(topic => ({ ...topic, category: "politika" }))
+                    ];
+                } else {
+                    availableTopics = topics[category].map(topic => ({ ...topic, category }));
+                }
+
+                if (!availableTopics || availableTopics.length === 0) {
+                    document.getElementById("result").innerHTML = '<p class="text-red-500 text-center">Žádné okruhy v této kategorii.</p>';
+                    return;
+                }
+
+                const randomIndex = Math.floor(Math.random() * availableTopics.length);
+                const selectedTopic = availableTopics[randomIndex];
+
+                console.log(`Vybraná otázka: Číslo ${selectedTopic.number}, Kategorie: ${categoryNames[selectedTopic.category]}, Odkaz: ${selectedTopic.link}`);
+
+                document.getElementById("result").innerHTML = `
+                    <div class="border p-4 rounded bg-gray-50">
+                        <h2 class="text-xl font-bold mb-2">${sanitizeHTML(selectedTopic.number + ". " + selectedTopic.name)}</h2>
+                        <p class="text-gray-600 mb-2">Kategorie: ${sanitizeHTML(categoryNames[selectedTopic.category])}</p>
+                        <p class="text-gray-700 mb-4">${sanitizeHTML(selectedTopic.description || 'Popis není k dispozici.')}</p>
+                        <a href="${selectedTopic.link}" target="_blank" class="inline-block bg-green-500 text-white p-2 rounded hover:bg-green-600" onclick="console.log('Kliknuto na odkaz:', '${selectedTopic.link}')">Potřebuji poradit</a>
+                    </div>
+                `;
+                document.getElementById("sequentialControls").classList.add("hidden");
+            } catch (error) {
+                console.error("Chyba při losování okruhu:", error);
+                document.getElementById("result").innerHTML = '<p class="text-red-500 text-center">Došlo k chybě při losování. Zkuste to znovu.</p>';
+            }
+        }
+
+        function startSequential() {
+            const category = document.getElementById("category").value;
+            if (category === "all") {
+                document.getElementById("result").innerHTML = '<p class="text-red-500 text-center">Vyberte konkrétní kategorii pro postupné zkoušení.</p>';
+                return;
+            }
+            currentCategory = category;
+            currentIndex = 0;
+            document.getElementById("sequentialControls").classList.remove("hidden");
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (!currentCategory) return;
+            const availableTopics = topics[currentCategory];
+            if (currentIndex >= availableTopics.length) {
+                document.getElementById("result").innerHTML = '<p class="text-green-500 text-center">Konec otázek v této kategorii.</p>';
+                document.getElementById("sequentialControls").classList.add("hidden");
+                return;
+            }
+            const selectedTopic = availableTopics[currentIndex];
+            console.log(`Postupná otázka: Číslo ${selectedTopic.number}, Kategorie: ${categoryNames[currentCategory]}, Odkaz: ${selectedTopic.link}`);
+            document.getElementById("result").innerHTML = `
+                <div class="border p-4 rounded bg-gray-50">
+                    <h2 class="text-xl font-bold mb-2">${sanitizeHTML(selectedTopic.number + ". " + selectedTopic.name)}</h2>
+                    <p class="text-gray-600 mb-2">Kategorie: ${sanitizeHTML(categoryNames[currentCategory])}</p>
+                    <p class="text-gray-700 mb-4">${sanitizeHTML(selectedTopic.description || 'Popis není k dispozici.')}</p>
+                    <a href="${selectedTopic.link}" target="_blank" class="inline-block bg-green-500 text-white p-2 rounded hover:bg-green-600" onclick="console.log('Kliknuto na odkaz:', '${selectedTopic.link}')">Potřebuji poradit</a>
+                </div>
+            `;
+            document.getElementById("backButton").disabled = currentIndex === 0;
+            currentIndex++;
+        }
+
+        function previousQuestion() {
+            if (!currentCategory) return;
+            currentIndex--;
+            if (currentIndex < 0) {
+                currentIndex = 0;
+                return;
+            }
+            const availableTopics = topics[currentCategory];
+            const selectedTopic = availableTopics[currentIndex];
+            console.log(`Předchozí otázka: Číslo ${selectedTopic.number}, Kategorie: ${categoryNames[currentCategory]}, Odkaz: ${selectedTopic.link}`);
+            document.getElementById("result").innerHTML = `
+                <div class="border p-4 rounded bg-gray-50">
+                    <h2 class="text-xl font-bold mb-2">${sanitizeHTML(selectedTopic.number + ". " + selectedTopic.name)}</h2>
+                    <p class="text-gray-600 mb-2">Kategorie: ${sanitizeHTML(categoryNames[currentCategory])}</p>
+                    <p class="text-gray-700 mb-4">${sanitizeHTML(selectedTopic.description || 'Popis není k dispozici.')}</p>
+                    <a href="${selectedTopic.link}" target="_blank" class="inline-block bg-green-500 text-white p-2 rounded hover:bg-green-600" onclick="console.log('Kliknuto na odkaz:', '${selectedTopic.link}')">Potřebuji poradit</a>
+                </div>
+            `;
+            document.getElementById("backButton").disabled = currentIndex === 0;
+        }
+    </script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js"></script>
+    <script>
+        // Konfigurace Firebase (nahraďte vlastními údaji z Firebase Console)
+        const firebaseConfig = {
+  apiKey: "AIzaSyDaVW3Fvy5a9Yl2jfVVvM7AY9wglPksGA8",
+  authDomain: "visitcounter-10623.firebaseapp.com",
+  databaseURL: "https://visitcounter-10623-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "visitcounter-10623",
+  storageBucket: "visitcounter-10623.firebasestorage.app",
+  messagingSenderId: "123585865079",
+  appId: "1:123585865079:web:30024d1d34fc0292376d72",
+  measurementId: "G-CYMBYNJTF3"
+};
+
+        // Inicializace Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Reference na počítadlo v databázi
+        const visitCounterRef = database.ref('visitCount');
+
+        // Funkce pro aktualizaci počítadla
+        function updateVisitCounter() {
+            visitCounterRef.transaction((currentCount) => {
+                return (currentCount || 0) + 1;
+            }, (error, committed, snapshot) => {
+                if (error) {
+                    console.error('Chyba při aktualizaci počítadla:', error);
+                    document.getElementById('visitCount').textContent = 'Chyba';
+                } else if (committed) {
+                    document.getElementById('visitCount').textContent = snapshot.val();
+                }
+            });
+        }
+
+        // Spuštění při načtení stránky
+        document.addEventListener('DOMContentLoaded', updateVisitCounter);
+    </script>
+</body>
+</html>
